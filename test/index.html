@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script type="module">
+      import Persist from "../dist/index.js";
+
+      function expect(actualValue) {
+        return {
+          toBe(expectValue) {
+            if (actualValue !== expectValue) {
+              console.error(`期待 ${expectValue}, 且得到 ${actualValue}`);
+            }
+          },
+          lte(expectValue) {
+            if (actualValue > expectValue) {
+              console.error(
+                `期待 ${expectValue} 小于等于 ${actualValue}，但不是`
+              );
+            }
+          },
+        };
+      }
+
+      const name = "test";
+
+      const persist = new Persist(name);
+
+      persist.set("name", "persist", 1);
+      expect(persist.get("name")).toBe("persist");
+
+      await new Promise((resolve) => setTimeout(resolve, 1000 + 10));
+      expect(persist.get("name")).toBe(undefined);
+
+      persist.set("name", "persist", 1);
+      persist.remove("name");
+      expect(persist.get("name")).toBe(undefined);
+
+      persist.set("name", "persist");
+      persist.set("age", 18);
+      persist.clear();
+      expect(persist.get("name")).toBe(undefined);
+      expect(persist.get("age")).toBe(undefined);
+
+      console.log("测试完毕");
+    </script>
+  </head>
+  <body></body>
+</html>
