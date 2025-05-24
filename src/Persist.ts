@@ -55,20 +55,28 @@ export class Persist {
     return cache;
   }
 
-  private save() {
-    for (let i = 0; i < this.storage.length; i++) {
-      const key = this.storage.key(i);
-      if (key && key.startsWith(this.prefix)) {
-        if (!this.cache.hasOwnProperty(key)) {
-          this.storage.removeItem(key);
-          i--;
+  private save(fullKey?: string) {
+    if (fullKey) {
+      if (this.cache.hasOwnProperty(fullKey)) {
+        this.storage.setItem(fullKey, JSON.stringify(this.cache[fullKey]));
+      } else {
+        this.storage.removeItem(fullKey);
+      }
+    } else {
+      for (let i = 0; i < this.storage.length; i++) {
+        const key = this.storage.key(i);
+        if (key && key.startsWith(this.prefix)) {
+          if (!this.cache.hasOwnProperty(key)) {
+            this.storage.removeItem(key);
+            i--;
+          }
         }
       }
-    }
 
-    Object.keys(this.cache).forEach((key) => {
-      this.storage.setItem(key, JSON.stringify(this.cache[key]));
-    });
+      Object.keys(this.cache).forEach((key) => {
+        this.storage.setItem(key, JSON.stringify(this.cache[key]));
+      });
+    }
   }
 
   get(key: string): any {
@@ -83,18 +91,19 @@ export class Persist {
   }
 
   set(key: string, value: any, ttl = 0) {
+    const fullKey = this.prefix + key;
     this.cache[this.prefix + key] = {
       ttl: ttl > 0 ? ttl * 1000 + Date.now() : 0,
       value,
     };
-    this.save();
+    this.save(fullKey);
   }
 
   remove(key: string) {
     const fullKey = this.prefix + key;
     if (this.cache.hasOwnProperty(fullKey)) {
       delete this.cache[fullKey];
-      this.save();
+      this.save(fullKey);
     }
   }
 
