@@ -2,12 +2,20 @@ type PersistType = "local" | "session";
 
 export class Persist {
   name: string;
+  prefix: string;
   type: PersistType;
   storage: Storage;
   cache: Record<string, { ttl: number; value: any }> = {};
 
-  constructor(name: string, type: PersistType = "local") {
+  constructor(
+    name: string,
+    options: {
+      type?: PersistType;
+    } = {}
+  ) {
+    const { type = "local" } = options;
     this.name = name;
+    this.prefix = name + "#";
     this.type = type;
     this.storage = this.getStorage(type);
     this.cache = this.getCache();
@@ -23,27 +31,48 @@ export class Persist {
   }
 
   private getCache() {
-    try {
-      const cache = this.storage.getItem(this.name);
-      if (!cache) {
-        return {};
+    const cache: Record<string, { ttl: number; value: any }> = {};
+
+    for (let i = 0; i < this.storage.length; i++) {
+      const key = this.storage.key(i);
+      if (key && key.startsWith(this.prefix)) {
+        const value = this.storage.getItem(key);
+        if (value) {
+          try {
+            const result = JSON.parse(value);
+            if (
+              result &&
+              typeof result === "object" &&
+              !Array.isArray(result)
+            ) {
+              cache[key] = result;
+            }
+          } catch {}
+        }
       }
-      const result = JSON.parse(cache);
-      if (result && typeof result === "object" && !Array.isArray(result)) {
-        return result;
-      }
-      return {};
-    } catch {
-      return {};
     }
+
+    return cache;
   }
 
   private save() {
-    this.storage.setItem(this.name, JSON.stringify(this.cache));
+    for (let i = 0; i < this.storage.length; i++) {
+      const key = this.storage.key(i);
+      if (key && key.startsWith(this.prefix)) {
+        if (!this.cache.hasOwnProperty(key)) {
+          this.storage.removeItem(key);
+          i--;
+        }
+      }
+    }
+
+    Object.keys(this.cache).forEach((key) => {
+      this.storage.setItem(key, JSON.stringify(this.cache[key]));
+    });
   }
 
   get(key: string): any {
-    const item = this.cache[key];
+    const item = this.cache[this.prefix + key];
     if (item) {
       if (item.ttl > 0 && item.ttl < Date.now()) {
         this.remove(key);
@@ -54,7 +83,7 @@ export class Persist {
   }
 
   set(key: string, value: any, ttl = 0) {
-    this.cache[key] = {
+    this.cache[this.prefix + key] = {
       ttl: ttl > 0 ? ttl * 1000 + Date.now() : 0,
       value,
     };
@@ -62,8 +91,9 @@ export class Persist {
   }
 
   remove(key: string) {
-    if (key in this.cache) {
-      delete this.cache[key];
+    const fullKey = this.prefix + key;
+    if (this.cache.hasOwnProperty(fullKey)) {
+      delete this.cache[fullKey];
       this.save();
     }
   }

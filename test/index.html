@@ -11,7 +11,7 @@
         return {
           toBe(expectValue) {
             if (actualValue !== expectValue) {
-              console.error(`期待 ${expectValue}, 且得到 ${actualValue}`);
+              console.error(`期待 ${expectValue}, 却得到 ${actualValue}`);
             }
           },
           lte(expectValue) {
@@ -30,19 +30,26 @@
 
       persist.set("name", "persist", 1);
       expect(persist.get("name")).toBe("persist");
+      expect(
+        JSON.parse(localStorage.getItem(persist.prefix + "name")).value
+      ).toBe("persist");
 
       await new Promise((resolve) => setTimeout(resolve, 1000 + 10));
       expect(persist.get("name")).toBe(undefined);
+      expect(localStorage.getItem(persist.prefix + "name")).toBe(null);
 
       persist.set("name", "persist", 1);
       persist.remove("name");
       expect(persist.get("name")).toBe(undefined);
+      expect(localStorage.getItem(persist.prefix + "name")).toBe(null);
 
       persist.set("name", "persist");
       persist.set("age", 18);
       persist.clear();
       expect(persist.get("name")).toBe(undefined);
       expect(persist.get("age")).toBe(undefined);
+      expect(localStorage.getItem(persist.prefix + "name")).toBe(null);
+      expect(localStorage.getItem(persist.prefix + "age")).toBe(null);
 
       console.log("测试完毕");
     </script>
