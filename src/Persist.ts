@@ -43,11 +43,16 @@ export class Persist {
             if (
               result &&
               typeof result === "object" &&
-              !Array.isArray(result)
+              !Array.isArray(result) &&
+              (result.ttl === 0 || result.ttl > Date.now())
             ) {
               cache[key] = result;
+            } else {
+              throw 0;
             }
-          } catch {}
+          } catch {
+            this.storage.removeItem(key);
+          }
         }
       }
     }
@@ -92,7 +97,7 @@ export class Persist {
 
   set(key: string, value: any, ttl = 0) {
     const fullKey = this.prefix + key;
-    this.cache[this.prefix + key] = {
+    this.cache[fullKey] = {
       ttl: ttl > 0 ? ttl * 1000 + Date.now() : 0,
       value,
     };
